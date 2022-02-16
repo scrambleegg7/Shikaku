@@ -36,7 +36,7 @@ class NIKKEIHokenClass(object):
         self.data_dir = data_dir
         self.output_dir = u"L:\\epson_pxm840f\\Shikakku"
 
-        self.filename = os.path.join(self.data_dir,"NIKKEI.csv")
+        self.filename = os.path.join(self.data_dir,"NIKKEI.TXT")
 
     def readShikaku(self):
 
@@ -84,8 +84,8 @@ class NIKKEIHokenClass(object):
 
         return df
 
-    def toCsv(self,df):
+    def toCsv(self,df, filename="NIKKEI_hoken.csv"):
 
-        NIKKEI = os.path.join(self.output_dir,"NIKKEI_hoken.csv")
+        NIKKEI = os.path.join(self.output_dir,filename)
         df.to_csv(NIKKEI, encoding='cp932', errors='replace', index=False)
 

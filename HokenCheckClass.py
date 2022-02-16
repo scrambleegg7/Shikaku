@@ -41,16 +41,16 @@ class HokenCheckClass(object):
         # expand latest shikaku history file
         zipObject = MyZipClass()
         self.df_shikaku = zipObject.readZipFile()
-        zipObject.toCsv(self.df_shikaku)
+        zipObject.toCsv(self.df_shikaku,"資格確認_保険証.csv")
 
         # read NIKKEI data to hold Domestic/Social Insurance
         nikkeiObject = NIKKEIHokenClass()
         self.df_nikkei = nikkeiObject.readShikaku()
         nikkeiObject.toCsv(self.df_nikkei)
 
-    def dftoCsv(self,df):
+    def dftoCsv(self,df, filename):
 
-        filename = os.path.join(self.output_dir,"資格確認_保険証.csv")
+        filename = os.path.join(self.output_dir,filename)
         df.to_csv(filename, index=False, encoding='cp932', errors='replace')
 
     def mergeCheck(self):

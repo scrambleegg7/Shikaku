@@ -38,9 +38,9 @@ class MyZipClass(object):
         self.zipShikaku = u"資格確認履歴*.zip"
         self.zipShikaku = os.path.join(self.data_dir, self.zipShikaku)
 
-    def toCsv(self,df):
+    def toCsv(self, df, filename="資格確認_保険証.csv"):
 
-        filename = os.path.join(self.output_dir,"資格確認_保険証.csv")
+        filename = os.path.join(self.output_dir, filename)
         df.to_csv(filename, index=False, encoding='cp932', errors='replace')
 
     def readZipFile(self):
@@ -107,13 +107,12 @@ class MyZipClass(object):
 
             df.reset_index(inplace=True,drop=True)
 
-            print(df.dtypes)
-
+            
             return df
 
     def readFileDirectory(self):
 
-        self.targets = glob(self.zipShikaku)
+        self.targets = sorted( glob(self.zipShikaku), reverse=True)
 
         if self.targets:
             for f in self.targets:

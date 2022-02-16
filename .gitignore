@@ -1,0 +1,9 @@
+*.log
+logs
+*.pyc
+*.PNG
+batch.txt
+eda.ipynb
+Thumbs.db
+.ipynb_checkpoints/
+*.lnk
