@@ -25,14 +25,20 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 import unicodedata
 import mojimoji
 
-class MyZipClass(object):
+class MyMasterClass(object):
 
-    def __init__(self):
+    def __init__(self,data_dir=u"S:\\", output_dir = u"L:\\epson_pxm840f\\Shikakku"):
 
-        self.data_dir = u"S:\\"
-        self.output_dir = u"L:\\epson_pxm840f\\Shikakku"
+        self.data_dir = data_dir
+        self.output_dir = output_dir
 
-    def toCsv(self, df, filename):
+    def toCsv(self, df, filename, sw="J"):
+        if sw == "J":
+            self.toCsvCP932(df, filename)
+        else:
+            raise("[MyMasterClass] Error toCsv : need to sw parameter.")
+
+    def toCsvCP932(self, df, filename):
 
         filename = os.path.join(self.output_dir,filename)
         df.to_csv(filename, index=False, encoding='cp932', errors='replace')

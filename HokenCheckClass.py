@@ -55,29 +55,55 @@ class HokenCheckClass(object):
 
     def mergeCheck(self):
         
-        selected=['chozai','id','name','birth','hokenShu','hoken','kigo','bango','kouhi1','kouhi_jyu1','kouhi2','kouhi_jyu2',
-            'kyufu','institution']
+        selected=['chozai','id','Name','birth','InsurerSegment','InsurerNumber',
+                    'InsuredCardSymbol','InsuredIdentificationNumber',
+                    'kouhi1','kouhi_jyu1','kouhi2','kouhi_jyu2',
+                    'kyufu','institution']
 
         df_nikkei = self.df_nikkei[selected].copy()
         df_nikkei = df_nikkei[~df_nikkei.duplicated()].copy()
 
-        df_nikkei = df_nikkei[df_nikkei.id > 90009358].sort_values('id', ascending=False).copy()
+        #df_nikkei = df_nikkei[df_nikkei.id > 90009358].sort_values('id', ascending=False).copy()
 
         #print(df_nikkei.head(10))
         df_merged = pd.merge(df_nikkei,self.df_shikaku,on=["birth"], how="left")
-
+        df_merged_name = pd.merge(df_nikkei,self.df_shikaku,on=["Name"], how="left")
         
-        masks = (df_merged.hoken_x == df_merged.hoken_y) & (df_merged.kigo_x == df_merged.kigo_y )  &   \
-             (df_merged.bango_x == df_merged.bango_y)
+        
+        masks = (df_merged.InsurerNumber_x == df_merged.InsurerNumber_y)  &  \
+            (df_merged.InsuredCardSymbol_x == df_merged.InsuredCardSymbol_y )  &   \
+             (df_merged.InsuredIdentificationNumber_x == df_merged.InsuredIdentificationNumber_y)
+
+        masks_name = (df_merged_name.InsurerNumber_x == df_merged_name.InsurerNumber_y)  &  \
+            (df_merged_name.InsuredCardSymbol_x == df_merged_name.InsuredCardSymbol_y )  &   \
+             (df_merged_name.InsuredIdentificationNumber_x == df_merged_name.InsuredIdentificationNumber_y)
 
 
         print("** file output shikaku with NIKKEI confirmed.....")
         #print(df_merged[masks])
         self.toCsv(df_merged[masks],"NIKKEI_shikaku_confirmed.csv")
 
+
         print("** NON confirmed file output shikaku with NIKKEI .....")
         #print(df_merged[masks])
-        self.toCsv(df_merged[~masks],"日計未確認.csv")
+        self.toCsv(df_merged[~masks],"日計未確認_byBirth.csv")
+
+
+        print("** NON confirmed file output shikaku with NIKKEI by Name.....")
+        #print(df_merged[masks])
+        #self.toCsv(df_merged_name[~masks_name],"日計未確認_byName.csv")
+
+        selected_df = df_merged_name[~masks_name].copy()
+        print(selected_df.columns  )
+        target = ["Name","birth_x","InsurerNumber_x", "InsuredCardSymbol_x", "InsuredIdentificationNumber_x"]
+
+        selected_df = selected_df[target].copy()
+        selected_df.columns = ["Name","birth","InsurerNumber", "InsuredCardSymbol", "InsuredIdentificationNumber"]
+        df_merged_name = pd.merge(selected_df,self.df_shikaku,on=["InsurerNumber", "InsuredCardSymbol", "InsuredIdentificationNumber"], how="left")
+        self.toCsv(df_merged_name,"日計未確認_byName.csv")
+
+
+        self.df_shikaku.InsurerNumber 
 
 
     def toCsv(self, df, filename):

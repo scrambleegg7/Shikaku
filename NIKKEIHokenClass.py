@@ -62,25 +62,25 @@ class NIKKEIHokenClass(object):
 
         df= self.df[targetCols].copy()
 
-        newcolname=['chozai','id','name','birth','hokenShu','hoken','kigo','bango','kouhi1','kouhi_jyu1','kouhi2','kouhi_jyu2',
-            'kyufu','institution','accept_counts','prescript_counts','total','paid']
+        newcolname=['chozai','id','Name','birth','InsurerSegment','InsurerNumber', 
+                'InsuredCardSymbol','InsuredIdentificationNumber','kouhi1','kouhi_jyu1','kouhi2','kouhi_jyu2',
+                'kyufu','institution','accept_counts','prescript_counts','total','paid']
 
         df.columns = newcolname
         df['kouhi1'] = df['kouhi1'].fillna(0).apply(int).apply(str).replace(['0'],' ')
         df['kouhi_jyu1'] = df['kouhi_jyu2'].fillna(0).apply(int).apply(str).replace(['0'],' ')
         df['kouhi2'] = df['kouhi2'].fillna(0).apply(int).apply(str).replace(['0'],' ')
         df['kouhi_jyu2'] = df['kouhi_jyu2'].fillna(0).apply(int).apply(str).replace(['0'],' ')
-        df['hoken'] = df['hoken'].fillna(0).apply(int).apply(str).replace(['0'],' ')
-        df['kigo'] = [unicodedata.normalize("NFKC",str(z)) for z in df['kigo'].fillna("").apply(str)]
+        df['InsurerNumber'] = df['InsurerNumber'].fillna(0).apply(int).apply(str).replace(['0'],' ')
+        df['InsuredCardSymbol'] = [unicodedata.normalize("NFKC",str(z)) for z in df['InsuredCardSymbol'].fillna("").apply(str)]
         # special purpose to change hyfun chord of Japanese
-        df['kigo'] = [ s.replace('\u2010','-') for s in df['kigo'].tolist() ]
+        df['InsuredCardSymbol'] = [ s.replace('\u2010','-') for s in df['InsuredCardSymbol'].tolist() ]
 
-        df['bango'] = [unicodedata.normalize("NFKC",str(z)) for z in df['bango'].fillna("").apply(str)]
+        df['InsuredIdentificationNumber'] = [unicodedata.normalize("NFKC",str(z)) for z in df['InsuredIdentificationNumber'].fillna("").apply(str)]
+        # Exclude MealCoupon Dealers
+        df = df[ df.kouhi1.str[:2] != "12" ].copy()
 
         df.reset_index(drop=True,inplace=True)
-
-        print(df.dtypes)
-
 
         return df
 

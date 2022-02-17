@@ -14,6 +14,8 @@ from glob import glob
 
 import seaborn as sns
 from sympy import subsets
+
+from MyMasterClass import MyMasterClass
 sns.set()
 
 import warnings
@@ -25,7 +27,7 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 import unicodedata
 import mojimoji
 
-class MyZipClass(object):
+class MyZipClass(MyMasterClass):
 
     def __init__(self):
 
@@ -38,10 +40,6 @@ class MyZipClass(object):
         self.zipShikaku = u"資格確認履歴*.zip"
         self.zipShikaku = os.path.join(self.data_dir, self.zipShikaku)
 
-    def toCsv(self, df, filename="資格確認_保険証.csv"):
-
-        filename = os.path.join(self.output_dir, filename)
-        df.to_csv(filename, index=False, encoding='cp932', errors='replace')
 
     def readZipFile(self):
         
@@ -93,17 +91,19 @@ class MyZipClass(object):
             print("## delte unzipped shikaku file...", unzipfilename)
             os.remove(unzipfilename)
 
-            cols = ["conf_date","segment","facial","validation","hoken","hoken_name","kigo","bango","eda","hoken_segment","yours","name",
-            "kana","sex1","birth","address","postal","hoken_issue_date","hoken_validation_date","hoken_end_date","ratio",
-            "invalid_data","korei_issue","korei_start","korei_end","korei_ratio","gendo_kubun","limit_certification","limit_segment", 
-            "limit_issue","limit_start","limit_end"]
+            cols = ["conf_date","segment","facial","validation","InsurerNumber","InsurerName",
+                            "InsuredCardSymbol","InsuredIdentificationNumber","InsuredBranchNumber",
+                            "hoken_segment","yours","Name",
+                    "NameKana","sex1","birth","Address","PostNumber","hoken_issue_date","hoken_validation_date","hoken_end_date","ratio",
+                    "invalid_data","korei_issue","korei_start","korei_end","korei_ratio","gendo_kubun","limit_certification","limit_segment", 
+                    "limit_issue","limit_start","limit_end"]
 
             df.columns = cols
-            df['hoken'] = df['hoken'].fillna(0).apply(int).apply(str).replace(['0'],' ')
+            df['InsurerNumber'] = df['InsurerNumber'].fillna(0).apply(int).apply(str).replace(['0'],' ')
             #df['kigo'] = [unicodedata.normalize("NFKC",str(z)) for z in df['kigo'].fillna("").apply(str)]
             # special purpose to change hyfun chord of Japanese
             #df['kigo'] = [ s.replace('\u2010','-') for s in df['kigo'].tolist() ]
-            df['bango'] = [unicodedata.normalize("NFKC",str(z)) for z in df['bango'].fillna("").apply(str)]
+            df['InsuredIdentificationNumber'] = [unicodedata.normalize("NFKC",str(z)) for z in df['InsuredIdentificationNumber'].fillna("").apply(str)]
 
             df.reset_index(inplace=True,drop=True)
 
@@ -127,7 +127,6 @@ def main():
 
     zipObject = MyZipClass()
     df = zipObject.readZipFile()
-    zipObject.dftoCsv(df)
 
 if __name__ == "__main__":
     main()
