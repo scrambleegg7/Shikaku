@@ -27,6 +27,7 @@ import mojimoji
 
 from MyZipClass import MyZipClass
 from NIKKEIHokenClass import NIKKEIHokenClass
+from MyKanjyaClass import MyKanjyaClass
 
 class HokenCheckClass(object):
 
@@ -46,12 +47,16 @@ class HokenCheckClass(object):
         # read NIKKEI data to hold Domestic/Social Insurance
         nikkeiObject = NIKKEIHokenClass()
         self.df_nikkei = nikkeiObject.readShikaku()
-        nikkeiObject.toCsv(self.df_nikkei)
+        nikkeiObject.toCsv(self.df_nikkei, filename="NIKKEI_hoken.csv")
+
+        kanjyaObject = MyKanjyaClass()
+        self.df_kanjya = kanjyaObject.readCSV()
+        kanjyaObject.toCsv(self.df_kanjya,"kanjya.csv")
 
     def dftoCsv(self,df, filename):
-
-        filename = os.path.join(self.output_dir,filename)
-        df.to_csv(filename, index=False, encoding='cp932', errors='replace')
+        super().toCsv(df, filename)
+        #filename = os.path.join(self.output_dir,filename)
+        #df.to_csv(filename, index=False, encoding='cp932', errors='replace')
 
     def mergeCheck(self):
         
@@ -63,21 +68,29 @@ class HokenCheckClass(object):
         df_nikkei = self.df_nikkei[selected].copy()
         df_nikkei = df_nikkei[~df_nikkei.duplicated()].copy()
 
-        #df_nikkei = df_nikkei[df_nikkei.id > 90009358].sort_values('id', ascending=False).copy()
+        df_nikkei = pd.merge(df_nikkei, self.df_kanjya, on=["id"], how="left")
 
+        #print(df_nikkei.columns)
+        #df_nikkei = df_nikkei[df_nikkei.id > 90009358].sort_values('id', ascending=False).copy()
+        #selectednew=['chozai','id','Name_x','birth_x','InsurerSegment','InsurerNumber',
+        #            'InsuredCardSymbol','InsuredIdentificationNumber',
+        #            'kouhi1','kouhi_jyu1','kouhi2','kouhi_jyu2',
+        #            'kyufu','institution']
+        #df_nikkei[selectednew].columns = selected
         #print(df_nikkei.head(10))
-        df_merged = pd.merge(df_nikkei,self.df_shikaku,on=["birth"], how="left")
+        df_merged = pd.merge(df_nikkei,self.df_shikaku,on=["birth"], how="left")        
         df_merged_name = pd.merge(df_nikkei,self.df_shikaku,on=["Name"], how="left")
-        
-        
+
+              
         masks = (df_merged.InsurerNumber_x == df_merged.InsurerNumber_y)  &  \
             (df_merged.InsuredCardSymbol_x == df_merged.InsuredCardSymbol_y )  &   \
-             (df_merged.InsuredIdentificationNumber_x == df_merged.InsuredIdentificationNumber_y)
+             (df_merged.InsuredIdentificationNumber_x == df_merged.InsuredIdentificationNumber_y) & \
+                 (df_merged.sex1 == df_merged.sex2)
 
         masks_name = (df_merged_name.InsurerNumber_x == df_merged_name.InsurerNumber_y)  &  \
             (df_merged_name.InsuredCardSymbol_x == df_merged_name.InsuredCardSymbol_y )  &   \
-             (df_merged_name.InsuredIdentificationNumber_x == df_merged_name.InsuredIdentificationNumber_y)
-
+             (df_merged_name.InsuredIdentificationNumber_x == df_merged_name.InsuredIdentificationNumber_y) & \
+                 (df_merged_name.sex1 == df_merged_name.sex2)
 
         print("** file output shikaku with NIKKEI confirmed.....")
         #print(df_merged[masks])
@@ -94,7 +107,7 @@ class HokenCheckClass(object):
         #self.toCsv(df_merged_name[~masks_name],"日計未確認_byName.csv")
 
         selected_df = df_merged_name[~masks_name].copy()
-        print(selected_df.columns  )
+        #print(selected_df.columns  )
         target = ["Name","birth_x","InsurerNumber_x", "InsuredCardSymbol_x", "InsuredIdentificationNumber_x"]
 
         selected_df = selected_df[target].copy()
@@ -103,7 +116,7 @@ class HokenCheckClass(object):
         self.toCsv(df_merged_name,"日計未確認_byName.csv")
 
 
-        self.df_shikaku.InsurerNumber 
+        #self.df_shikaku.InsurerNumber 
 
 
     def toCsv(self, df, filename):

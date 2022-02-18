@@ -32,6 +32,9 @@ class MyMasterClass(object):
         self.data_dir = data_dir
         self.output_dir = output_dir
 
+    def testfunc(self):
+        print("testfunc")
+
     def toCsv(self, df, filename, sw="J"):
         if sw == "J":
             self.toCsvCP932(df, filename)
@@ -42,5 +45,10 @@ class MyMasterClass(object):
 
         filename = os.path.join(self.output_dir,filename)
         df.to_csv(filename, index=False, encoding='cp932', errors='replace')
+
+    def readCSV(self, filename ):
+
+        filename = os.path.join(self.data_dir,filename)
+        return pd.read_csv(filename, encoding='cp932')
 
         

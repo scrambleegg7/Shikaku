@@ -1,7 +1,3 @@
-# %% [markdown]
-# # Load Library
-
-# %%
 import xml.etree.ElementTree as ET
 import os
 
@@ -28,7 +24,9 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 #import japanize_matplotlib
 import unicodedata
 
-class NIKKEIHokenClass(object):
+from MyMasterClass import MyMasterClass
+
+class NIKKEIHokenClass(MyMasterClass):
 
     def __init__(self,data_dir = u"L:\\Miyuki"):
 
@@ -44,6 +42,7 @@ class NIKKEIHokenClass(object):
         targetCols = ['調剤日',
         '患者No',
         '患者名',
+        '患者フリガナ',
         '生年月日',
         '保険種類',
         '保険者番号',
@@ -62,7 +61,7 @@ class NIKKEIHokenClass(object):
 
         df= self.df[targetCols].copy()
 
-        newcolname=['chozai','id','Name','birth','InsurerSegment','InsurerNumber', 
+        newcolname=['chozai','id','Name','Kana','birth','InsurerSegment','InsurerNumber', 
                 'InsuredCardSymbol','InsuredIdentificationNumber','kouhi1','kouhi_jyu1','kouhi2','kouhi_jyu2',
                 'kyufu','institution','accept_counts','prescript_counts','total','paid']
 
@@ -84,8 +83,7 @@ class NIKKEIHokenClass(object):
 
         return df
 
-    def toCsv(self,df, filename="NIKKEI_hoken.csv"):
-
-        NIKKEI = os.path.join(self.output_dir,filename)
-        df.to_csv(NIKKEI, encoding='cp932', errors='replace', index=False)
+    #def toCsv(self,df, filename="NIKKEI_hoken.csv"):
+    #    NIKKEI = os.path.join(self.output_dir,filename)
+    #    df.to_csv(NIKKEI, encoding='cp932', errors='replace', index=False)
 
