@@ -76,8 +76,8 @@ class NIKKEIHokenClass(MyMasterClass):
         df['InsuredCardSymbol'] = [ s.replace('\u2010','-') for s in df['InsuredCardSymbol'].tolist() ]
 
         df['InsuredIdentificationNumber'] = [unicodedata.normalize("NFKC",str(z)) for z in df['InsuredIdentificationNumber'].fillna("").apply(str)]
-        # Exclude MealCoupon Dealers
-        df = df[ df.kouhi1.str[:2] != "12" ].copy()
+        # Exclude MealCoupon Dealers / mental patient
+        df = df[ ((df.kouhi1.str[:2] != "12") & (df.kouhi1.str[:2] != "15")) ].copy()
 
         df.reset_index(drop=True,inplace=True)
 
