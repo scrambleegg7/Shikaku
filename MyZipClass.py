@@ -16,6 +16,8 @@ import seaborn as sns
 from sympy import subsets
 
 from MyMasterClass import MyMasterClass
+from HOKENKeyClass import HokenKeyClass
+
 sns.set()
 
 import warnings
@@ -40,6 +42,8 @@ class MyZipClass(MyMasterClass):
         self.zipShikaku = u"資格確認履歴*.zip"
         self.zipShikaku = os.path.join(self.data_dir, self.zipShikaku)
 
+        # 保険番号convert Class
+        self.HOKENKeyObject = HokenKeyClass()
 
     def readZipFile(self):
         
@@ -62,7 +66,10 @@ class MyZipClass(MyMasterClass):
             #with thezip.open(origfile,mode='r') as thefile:
             #Let us verify the operation..
             unzipfilename = os.path.join(self.output_dir, info.filename)
-            df = pd.read_csv(unzipfilename)
+
+            read_data_types = {"被保険者証記号":str, "保険者番号":str , "被保険者証番号":str, "被保険者証枝番":str }
+
+            df = pd.read_csv(unzipfilename, dtype=read_data_types)
             df.dropna(subset=["保険者番号"],    inplace=True)
 
             #print(df.columns)
@@ -79,15 +86,6 @@ class MyZipClass(MyMasterClass):
             df.drop(delcols, inplace=True, axis=1)
             df.drop_duplicates(inplace=True, subset=["氏名"])
 
-            df['被保険者証記号'] = [unicodedata.normalize("NFKC",str(z.strip(" "))) for z in df['被保険者証記号'].fillna("").apply(str)]
-            df['被保険者証記号'] = df['被保険者証記号'].apply(mojimoji.zen_to_han)
-            #df['被保険者証記号'].replace(['‐'], '-', inplace=True)
-            df['被保険者証記号'] = [ s.replace('\u2010','-') for s in df['被保険者証記号'].tolist() ]
-
-            #print("after vanishing unicode escape..........")
-            #print(df['被保険者証記号'].tolist())
-            
-
             print("## delte unzipped shikaku file...", unzipfilename)
             os.remove(unzipfilename)
 
@@ -99,12 +97,21 @@ class MyZipClass(MyMasterClass):
                     "limit_issue","limit_start","limit_end"]
 
             df.columns = cols
-            df['InsurerNumber'] = df['InsurerNumber'].fillna(0).apply(int).apply(str).replace(['0'],' ')
-            #df['kigo'] = [unicodedata.normalize("NFKC",str(z)) for z in df['kigo'].fillna("").apply(str)]
-            # special purpose to change hyfun chord of Japanese
-            #df['kigo'] = [ s.replace('\u2010','-') for s in df['kigo'].tolist() ]
-            df['InsuredIdentificationNumber'] = [unicodedata.normalize("NFKC",str(z)) for z in df['InsuredIdentificationNumber'].fillna("").apply(str)]
 
+            self.HOKENKeyObject.setData(
+                        df["InsurerNumber"],
+                        df["InsuredCardSymbol"],
+                        df["InsuredIdentificationNumber"],
+                        df["InsuredBranchNumber"]
+            )
+            df_HOKEN = self.HOKENKeyObject.operation()
+
+            df["InsurerNumber"] = df_HOKEN["InsurerNumber"]
+            df["InsuredCardSymbol"] = df_HOKEN["InsuredCardSymbol"]
+            df["InsuredIdentificationNumber"] = df_HOKEN["InsuredIdentificationNumber"]
+            df["InsuredBranchNumber"] = df_HOKEN["InsuredBranchNumber"]
+            
+            df.fillna("", inplace=True)
             df.reset_index(inplace=True,drop=True)
 
             
@@ -114,11 +121,13 @@ class MyZipClass(MyMasterClass):
 
         self.targets = sorted( glob(self.zipShikaku), reverse=True)
 
+
         if self.targets:
             for f in self.targets:
                 return f
         else:
-            exit
+            raise("Error %s not found" % self.zipShikaku)
+            
 
 
 
@@ -127,6 +136,14 @@ def main():
 
     zipObject = MyZipClass()
     df = zipObject.readZipFile()
+
+    selectObj = ["InsurerNumber","InsuredCardSymbol","InsuredIdentificationNumber","InsuredBranchNumber"]
+    df = df[selectObj].copy()
+
+    print(df.head(3))
+    print(df.tail(3))
+
+    zipObject.toCsv(df,"test.csv")
 
 if __name__ == "__main__":
     main()

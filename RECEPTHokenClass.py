@@ -29,40 +29,54 @@ import glob
 
 
 from MyMasterClass import MyMasterClass
+from HOKENKeyClass import HokenKeyClass
 
-class RECEPTClass(MyMasterClass):
 
-    def __init__(self, data_dir=u"L:\\RECEPTY\\national", output_dir = u"L:\\epson_pxm840f\\Shikakku"):
+class RECEPTHokenClass(MyMasterClass):
+
+    def __init__(self, data_dir=u"L:\\RECEPTY\\national",  output_dir = u"L:\\epson_pxm840f\\Shikakku"):
         super().__init__(data_dir, output_dir)
 
 
         filename = "RECEIPTY.CYO"
-        self.filename = os.path.join(self.data_dir, filename)
+        self.nfilename = os.path.join(self.data_dir, filename)
+        
+        data_dir2=u"L:\\RECEPTY\\tokyo"
+        self.tfilename = os.path.join(data_dir2, filename)
 
-    def readData(self):
+        # 保険番号convert Class
+        self.HOKENKeyObject = HokenKeyClass()
 
-        with codecs.open(self.filename, "r", "Shift-JIS", "ignore") as file:
+
+    def readData(self,filename):
+
+        with codecs.open(filename, "r", "Shift-JIS", "ignore") as file:
             col_names = [ 'c{0:02d}'.format(i) for i in range(180) ]
 
-            df_re = pd.read_csv(file, delimiter=",", names=col_names, engine="python" )
+            read_data_types = { "c01":str, "c02":str , "c03":str }
+
+            df_re = pd.read_csv(file, delimiter=",", names=col_names, engine="python", dtype=read_data_types )
             #print(df_re.head())
             print("[ReceiptyClass] recepty csv data file size --> ",df_re.shape)
 
             return df_re
     
-    def makeInsurancedata(self):
-        df_RE = self.readData()
+    def integrateInsurancedata(self):
+
+        df_n = self.readData(self.nfilename)
+        df_nat = self.makeInsurancedata(df_n)
+
+        df_t = self.readData(self.tfilename)
+        df_tok = self.makeInsurancedata(df_t)
+
+        return pd.concat([df_nat,df_tok]).reset_index(drop=True)
+
+    def makeKouhiData(self,df_RE):
+    
         df_RE_index = df_RE[df_RE.c00 == "RE"].index.tolist() 
-
-        retargetcols = ["c04","c05","c06","c07","c08"]
-        hotargetcols = ["c01","c02","c03","c09"]
         kotargetcols = ["c01","c02","c03","c07","c09"]
+        _ko = df_RE[df_RE.c00 == "KO"][kotargetcols] # .reset_index(drop=True)
 
-        _re = df_RE[df_RE.c00 == "RE"][retargetcols].reset_index(drop=True)  
-        _ho = df_RE[df_RE.c00 == "HO"][hotargetcols].reset_index(drop=True)
-        _ko = df_RE[df_RE.c00 == "KO"][kotargetcols]# .reset_index(drop=True)
-
-        df_list = []
         data1 = {"c01":np.nan,"c02":np.nan,"c03":np.nan,"c07":np.nan,"c09":np.nan }
         data2 = {"c01x":np.nan,"c02x":np.nan,"c03x":np.nan,"c07x":np.nan,"c09x":np.nan}
 
@@ -73,44 +87,136 @@ class RECEPTClass(MyMasterClass):
         for idx, re_idx in enumerate(df_RE_index[:-1]):
             
             ko_idx_list = []
+            
+            tmp_re_idx = None
             tmp_ko_idx = None
+
+            ko_idx_list2 = []
             for ko_idx in _ko.index.tolist():
                 
                 if ko_idx > re_idx and ko_idx <= df_RE_index[idx+1]:
                     try:
+                        tmp_re_idx = re_idx
                         tmp_ko_idx = ko_idx
-                        data1 = {"c01":_ko.c01,"c02":_ko.c02,"c03":_ko.c03,"c07":_ko.c03,"c09":_ko.c09 }
-                        ko_idx_list.append(pd.DataFrame(data1, index=[ko_idx]) )
+                        
+                        data1 = {"re_idx":re_idx, "c01":_ko.c01,"c02":_ko.c02,"c03":_ko.c03,"c07":_ko.c07,"c09":_ko.c09 }
+                        ko_idx_list.append(pd.DataFrame(data1, index=[tmp_ko_idx]) )
+
                     except:
                         print("Error : re idx %d ko_idx %d" % ( re_idx, ko_idx ))
                 
             if len(ko_idx_list) == 1: # case 2nd kouhi not found dummy record added
                 _tmp_df=pd.DataFrame(data2, index=[tmp_ko_idx])
-                ko_idx_list.append( _tmp_df )
+                ko_idx_list2.append(ko_idx_list[0])
+                ko_idx_list2.append( _tmp_df )
             
-                _tmp = pd.concat( ko_idx_list,axis=1)
+                _tmp = pd.concat( ko_idx_list2,axis=1)
+                #_tmp.index = tmp_re_idx
+
                 #print(_tmp)
 
                 ko_list1.append(_tmp)
 
+            if len(ko_idx_list) == 2: # case 2nd kouhi found 
+                #print(ko_idx_list)
+                #print(df_RE.loc[re_idx])
+                ko_list2.append(ko_idx_list)
 
-        _df_ko_2 = pd.concat(ko_list1)    
+        # build kouhi x 1        
+        kouhi_columns = ["RE_index1", "kouhi1","kouhi_jyu1","kyufu_kubu1","futan1","kouhifutan1",
+                            "kouhi2","kouhi_jyu2","kyufu_kubu2","futan2","kouhifutan2" ]     
+        df_kouhilist1 = pd.concat( ko_list1, axis=0).fillna("")   
+        df_kouhilist1.columns = kouhi_columns
+
+        # build kouhi x 2 (multiple kouhi)
+        _tmp_list = []
+        for _klist in ko_list2:
+            np_list = pd.concat( _klist ).to_numpy()
+            np_list = np_list.reshape(  np_list.shape[0] * np_list.shape[1])
+            df_kouhilist = pd.DataFrame(np_list   ).T.fillna("")
+            df_kouhilist.index = _klist[0].index
+
+            _tmp_list.append(df_kouhilist)
+
+        kouhi_columns2 = ["RE_index1", "kouhi1","kouhi_jyu1","kyufu_kubu1","futan1","kouhifutan1",
+                        "RE_index2", "kouhi2","kouhi_jyu2","kyufu_kubu2","futan2","kouhifutan2" ]    
+
+        if len(_tmp_list) > 0:
+            df_kouhilist2 = pd.concat( _tmp_list, axis=0 )
+            df_kouhilist2.columns = kouhi_columns2
+
+            df_kouhi_final = pd.concat( [df_kouhilist1, df_kouhilist2], axis = 0 )
+            df_kouhi_final.index = df_kouhi_final.RE_index1
+            df_kouhi_final.drop(["RE_index1","RE_index2"], inplace=True, axis=1)
+
+        else:
+            df_kouhi_final = df_kouhilist1.copy()
+            df_kouhi_final.index = df_kouhi_final.RE_index1
+            df_kouhi_final.drop(["RE_index1"], inplace=True, axis=1)
+            
+        #print(df_kouhi_final.head(3))
+
+        return df_kouhi_final
+
+        
+    def makeInsurancedata(self, df_RE):
+
+        df_RE_index = df_RE[df_RE.c00 == "RE"].index.tolist() 
+
+        retargetcols = ["c04","c05","c06","c07","c08"]
+        hotargetcols = ["c01","c02","c03","c09"]
+        kotargetcols = ["c01","c02","c03","c07","c09"]
+
+        _re = df_RE[df_RE.c00 == "RE"][retargetcols] # .reset_index(drop=True)  
+        _ho = df_RE[df_RE.c00 == "HO"][hotargetcols] #.reset_index(drop=True)
+
+        _ho.index = _ho.index - 1
+
+        df_ko_2 = self.makeKouhiData(df_RE)
+
         _df2 = pd.concat( [_re,_ho], axis=1)
-        _df = pd.merge(_df2, _df_ko_2, how="left", left_index=True, right_index=True)
+        df = pd.merge(_df2, df_ko_2, how="left", left_index=True, right_index=True)
 
-        _df.columns = ["Name","sex","birth","ratio","SpecialPurpose","InsurerNumber", 
+        df.columns = ["Name","sex","birth","ratio","SpecialPurpose","InsurerNumber", 
                         "InsuredCardSymbol","InsuredIdentificationNumber", "InsuredFutan", 
                         "kouhi1","kouhi_jyu1","kyufu_kubu1","futan1","kouhifutan1",
                         "kouhi2","kouhi_jyu2","kyufu_kubu2","futan2","kouhifutan2" ]     
 
-        _df['InsuredCardSymbol'] = [unicodedata.normalize("NFKC",str(z)) for z in _df['InsuredCardSymbol'].fillna("").apply(str)]
-        _df['InsuredCardSymbol'] = [ s.replace('\u2010','-') for s in _df['InsuredCardSymbol'].tolist() ]
-        _df['InsuredCardSymbol'] = [ s.replace('\u2212','-') for s in _df['InsuredCardSymbol'].tolist() ]
-        _df['sex'] = [ s.replace('2',u'女') for s in _df['sex'].tolist() ]
-        _df['sex'] = [ s.replace('1',u'男') for s in _df['sex'].tolist() ]
-        _df['birth'] = _df['birth'].apply(lambda x: pd.to_datetime(str(x), format='%Y%m%d'))
 
-        
-        _df['InsuredIdentificationNumber'] = [unicodedata.normalize("NFKC",str(z)) for z in _df['InsuredIdentificationNumber'].fillna("").apply(str)]
+        self.HOKENKeyObject.setData(
+                    df["InsurerNumber"],
+                    df["InsuredCardSymbol"],
+                    df["InsuredIdentificationNumber"],
+                    None
+           )
+        df_HOKEN = self.HOKENKeyObject.operation()
 
-        return _df.fillna("")
+        df["InsurerNumber"] = df_HOKEN["InsurerNumber"]
+        df["InsuredCardSymbol"] = df_HOKEN["InsuredCardSymbol"]
+        df["InsuredIdentificationNumber"] = df_HOKEN["InsuredIdentificationNumber"]
+
+        df['sex'] = [ s.replace('2','女') for s in df['sex'].tolist() ]
+        df['sex'] = [ s.replace('1','男') for s in df['sex'].tolist() ]
+        df['birth'] = df['birth'].apply(lambda x: pd.to_datetime(str(x), format='%Y%m%d'))
+
+        # 12 and 15 excluded from outputlist
+        df = df[ ((df.kouhi1.str[:2] != "12") & (df.kouhi1.str[:2] != "15")) ].copy()        
+
+        return df.fillna("")
+    
+def main():
+
+    nkObject = RECEPTHokenClass()
+    df = nkObject.integrateInsurancedata()
+
+    selectObj = ["InsurerNumber","InsuredCardSymbol","InsuredIdentificationNumber"]
+    df = df[selectObj].copy()
+
+    print(df.head(3))
+    print(df.tail(3))
+    nkObject.toCsv(df,"test.csv")
+
+
+
+if __name__ == "__main__":
+    main()

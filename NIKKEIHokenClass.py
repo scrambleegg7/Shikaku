@@ -25,6 +25,7 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 import unicodedata
 
 from MyMasterClass import MyMasterClass
+from HOKENKeyClass import HokenKeyClass
 
 class NIKKEIHokenClass(MyMasterClass):
 
@@ -36,9 +37,19 @@ class NIKKEIHokenClass(MyMasterClass):
 
         self.filename = os.path.join(self.data_dir,"NIKKEI.TXT")
 
+        # 保険番号convert Class
+        self.HOKENKeyObject = HokenKeyClass()
+
     def readShikaku(self):
 
-        self.df = pd.read_csv(self.filename,encoding='cp932')
+        read_data_types = {"保険者番号":str,  "被保険者記号":str, "被保険者番号":str ,
+                            '公費負担者番号１':str,
+                            '公費受給番号１':str,
+                            '公費負担者番号２':str,
+                            '公費受給番号２':str,
+                            }
+
+        self.df = pd.read_csv(self.filename,encoding='cp932', dtype=read_data_types)
         targetCols = ['調剤日',
         '患者No',
         '患者名',
@@ -66,20 +77,32 @@ class NIKKEIHokenClass(MyMasterClass):
                 'kyufu','institution','accept_counts','prescript_counts','total','paid']
 
         df.columns = newcolname
-        df['kouhi1'] = df['kouhi1'].fillna(0).apply(int).apply(str).replace(['0'],' ')
-        df['kouhi_jyu1'] = df['kouhi_jyu2'].fillna(0).apply(int).apply(str).replace(['0'],' ')
-        df['kouhi2'] = df['kouhi2'].fillna(0).apply(int).apply(str).replace(['0'],' ')
-        df['kouhi_jyu2'] = df['kouhi_jyu2'].fillna(0).apply(int).apply(str).replace(['0'],' ')
-        df['InsurerNumber'] = df['InsurerNumber'].fillna(0).apply(int).apply(str).replace(['0'],' ')
-        df['InsuredCardSymbol'] = [unicodedata.normalize("NFKC",str(z)) for z in df['InsuredCardSymbol'].fillna("").apply(str)]
-        # special purpose to change hyfun chord of Japanese
-        df['InsuredCardSymbol'] = [ s.replace('\u2010','-') for s in df['InsuredCardSymbol'].tolist() ]
+        df = df[df.institution != "東武練馬ｸﾘﾆｯｸ"].copy()
+        df = df[ ~df.InsurerSegment.isin(["自費","公単", "労災"]) ].copy()
 
-        df['InsuredIdentificationNumber'] = [unicodedata.normalize("NFKC",str(z)) for z in df['InsuredIdentificationNumber'].fillna("").apply(str)]
+
+        df['kouhi1'] = df['kouhi1'].fillna("")
+        df['kouhi_jyu1'] = df['kouhi_jyu2'].fillna("")
+        df['kouhi2'] = df['kouhi2'].fillna("")
+        df['kouhi_jyu2'] = df['kouhi_jyu2'].fillna("")
+
+        self.HOKENKeyObject.setData(
+                    df["InsurerNumber"],
+                    df["InsuredCardSymbol"],
+                    df["InsuredIdentificationNumber"],
+                    None
+           )
+        df_HOKEN = self.HOKENKeyObject.operation()
+
+        df["InsurerNumber"] = df_HOKEN["InsurerNumber"]
+        df["InsuredCardSymbol"] = df_HOKEN["InsuredCardSymbol"]
+        df["InsuredIdentificationNumber"] = df_HOKEN["InsuredIdentificationNumber"]
+
         # Exclude MealCoupon Dealers / mental patient
         df = df[ ((df.kouhi1.str[:2] != "12") & (df.kouhi1.str[:2] != "15")) ].copy()
 
         df.reset_index(drop=True,inplace=True)
+        df.fillna("",inplace=True)
 
         return df
 
@@ -87,3 +110,24 @@ class NIKKEIHokenClass(MyMasterClass):
     #    NIKKEI = os.path.join(self.output_dir,filename)
     #    df.to_csv(NIKKEI, encoding='cp932', errors='replace', index=False)
 
+
+
+
+
+def main():
+
+    nkObject = NIKKEIHokenClass()
+    df = nkObject.readShikaku()
+
+    selectObj = ["InsurerNumber","InsuredCardSymbol","InsuredIdentificationNumber"]
+    df = df[selectObj].copy()
+
+    print(df.head(3))
+    print(df.tail(3))
+    #print()
+    #zipObject.toCsv(df,"shikaku.csv")
+
+
+
+if __name__ == "__main__":
+    main()
