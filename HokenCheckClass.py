@@ -80,7 +80,15 @@ class HokenCheckClass(object):
         #df_nikkei[selectednew].columns = selected
         #print(df_nikkei.head(10))
         df_merged = pd.merge(df_nikkei,self.df_shikaku,on=["birth", "Name"], how="left")        
-        df_merged_name = pd.merge(df_nikkei,self.df_shikaku,on=["Name"], how="left")
+        df_merged_birth_hoken = pd.merge(df_nikkei,self.df_shikaku,on=["birth", "InsurerNumber", 
+                                'InsuredCardSymbol','InsuredIdentificationNumber'] )
+
+        name_mask = (df_merged_birth_hoken.Name_x != df_merged_birth_hoken.Name_y) #& \
+                    #(df_merged_birth_hoken.Name_y.apply(lambda x:len(str(x))) != 0 ) 
+        
+        df_merged_birth_hoken = df_merged_birth_hoken[name_mask ].copy()
+
+        self.toCsv(df_merged_birth_hoken,"NameDiff.csv")
 
         # 保険番号、記号、番号、性別　確認
         masks = (df_merged.InsurerNumber_x == df_merged.InsurerNumber_y)  &  \
@@ -88,15 +96,17 @@ class HokenCheckClass(object):
              (df_merged.InsuredIdentificationNumber_x == df_merged.InsuredIdentificationNumber_y) # & \
                 # (df_merged.sex1 == df_merged.sex2)
 
-        masks_name = (df_merged_name.InsurerNumber_x == df_merged_name.InsurerNumber_y)  &  \
-            (df_merged_name.InsuredCardSymbol_x == df_merged_name.InsuredCardSymbol_y )  &   \
-             (df_merged_name.InsuredIdentificationNumber_x == df_merged_name.InsuredIdentificationNumber_y) & \
-                 (df_merged_name.sex1 == df_merged_name.sex2)
+        #masks_name = (df_merged_name.InsurerNumber_x == df_merged_name.InsurerNumber_y)  &  \
+        #    (df_merged_name.InsuredCardSymbol_x == df_merged_name.InsuredCardSymbol_y )  &   \
+        #     (df_merged_name.InsuredIdentificationNumber_x == df_merged_name.InsuredIdentificationNumber_y) & \
+        #         (df_merged_name.sex1 == df_merged_name.sex2)
 
         #print("** file output shikaku with NIKKEI confirmed.....")
         #print(df_merged[masks])
         #self.toCsv(df_merged[masks],"NIKKEI_shikaku_confirmed.csv")
         
+
+
         uncheck_list = []
         idx=0
 

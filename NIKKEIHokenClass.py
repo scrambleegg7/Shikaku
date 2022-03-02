@@ -78,7 +78,8 @@ class NIKKEIHokenClass(MyMasterClass):
 
         df.columns = newcolname
         df = df[df.institution != "東武練馬ｸﾘﾆｯｸ"].copy()
-        df = df[ ~df.InsurerSegment.isin(["自費","公単", "労災"]) ].copy()
+        df = df[ ~df.InsurerSegment.isin(["自費","公単", "労災","後期"]) ].copy()
+        df = df[ (df.InsurerNumber.str[:2] != "39")  ].copy()
 
 
         df['kouhi1'] = df['kouhi1'].fillna("")
