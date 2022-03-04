@@ -83,6 +83,16 @@ class HokenCheckClass(object):
         df_merged_birth_hoken = pd.merge(df_nikkei,self.df_shikaku,on=["birth", "InsurerNumber", 
                                 'InsuredCardSymbol','InsuredIdentificationNumber'] )
 
+        # 資格確認未確認データ
+        df_merged_birth_hoken2 = pd.merge(df_nikkei,self.df_shikaku,on=["birth", "InsurerNumber", 
+                                'InsuredCardSymbol','InsuredIdentificationNumber'], how="left" )
+
+        mask = df_merged_birth_hoken2.isnull().validation
+        self.df_merged_unmatched = df_merged_birth_hoken2[mask].copy()
+        self.df_merged_unmatched.drop_duplicates(inplace=True, subset=["Name_x"])
+        self.toCsv(self.df_merged_unmatched,"日計資格確認端末未確認データ.csv")
+
+
         name_mask = (df_merged_birth_hoken.Name_x != df_merged_birth_hoken.Name_y) #& \
                     #(df_merged_birth_hoken.Name_y.apply(lambda x:len(str(x))) != 0 ) 
         
@@ -114,10 +124,12 @@ class HokenCheckClass(object):
         df_merged_check = df_merged[masks]
         sex_mask = (df_merged_check.sex1 == df_merged_check.sex2) 
         df_merged_sex_check = df_merged_check[~sex_mask].copy()
-        df_merged_sex_check = df_merged_sex_check.insert(loc=idx, column="flag", value=["男女違い"])
+        df_merged_sex_check = df_merged_sex_check.assign(flag="男女違い")
         print("sex check.....")
-        if df_merged_sex_check != None:
+        if df_merged_sex_check.empty != None:
             uncheck_list.append(df_merged_sex_check)        
+        else:
+            print(" No Sex difference ")
 
         ## owner family check
 
@@ -127,32 +139,33 @@ class HokenCheckClass(object):
         yours_masks = (df_merged_check.InsurerSegment.apply(lambda x:x[2:]) != df_merged_check.yours) & \
                                     (df_merged_check.yours != "")
         df_unchecked = df_merged_check[yours_masks]
-        df_unchecked = df_unchecked.insert(loc=idx, column="flag", value=["性別違い"])
+        #df_unchecked = df_unchecked.insert(loc=idx, column="flag", value=["性別違い"])
+        df_unchecked = df_unchecked.assign(flag="本人家族違い")
         print("family check....")
-        if df_unchecked != None:
+        if df_unchecked.empty != None:
             uncheck_list.append(df_unchecked)
         else:
-            print(" No difference ")
+            print(" No family difference ")
 
         # PaymentRatio check
         df_pay_check = df_merged[masks]
         pay_check = df_pay_check.InsurerSegment.apply(lambda x:x[:2]).isin( ["社保"])
         pay_check_older = df_pay_check.InsurerSegment.apply(lambda x:x[:2]).isin( ["後期"])
-        
+
         df_pay_check_corp = df_pay_check[pay_check]
         df_unchecked_corp = df_pay_check_corp[df_pay_check_corp.kyufu != 70]
-        df_unchecked_corp = df_unchecked_corp.insert(loc=idx, column="flag", value=["社保給付割合相違"])
+        df_unchecked_corp = df_unchecked_corp.assign(flag="社保給付割合相違")
         print("Corp Insurance rate check....")
-        if df_unchecked_corp != None:
+        if df_unchecked_corp.empty != None:
             uncheck_list.append(df_unchecked_corp)
         else:
             print(" No difference ")
 
         df_pay_check_nat = df_pay_check[pay_check_older]       
         df_unchecked_nat = df_pay_check_nat[ (df_pay_check_nat.kyufu + df_pay_check_nat.ratio) != 100 ]
-        df_unchecked_nat = df_unchecked_nat.insert(loc=idx, column="flag", value=["国保給付割合相違"])
+        df_unchecked_nat = df_unchecked_nat.assign(flag="国保給付割合相違")
         print("Domestical Insurance rate check....")
-        if df_unchecked_nat != None:
+        if df_unchecked_nat.empty != None:
             uncheck_list.append(df_unchecked_nat)
         else:
             print(" No difference ")
@@ -165,9 +178,6 @@ class HokenCheckClass(object):
             print("*** No report 日計保険相違 ***")
 
 
-        self.df_merged_unmatched = df_merged[~masks].copy()
-        self.df_merged_unmatched.drop_duplicates(inplace=True, subset=["Name"])
-        self.toCsv(self.df_merged_unmatched,"日計資格確認端末未確認データ.csv")
 
 
         #print("** NON confirmed file output shikaku with NIKKEI by Name.....")

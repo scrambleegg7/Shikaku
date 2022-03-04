@@ -71,7 +71,7 @@ class RECEPTHokenCheckClass(MyMasterClass):
                     'kyufu','institution']
 
     
-        df_merged = pd.merge(self.df_recept, self.df_shikaku, on=["Name", "birth"], how="left")
+        df_merged = pd.merge(self.df_recept, self.df_shikaku, on=["birth"], how="left")
         df_merged.fillna("", inplace=True)
 
         masks = (df_merged.InsurerNumber_x.apply(str) == df_merged.InsurerNumber_y.apply(str))  &  \
@@ -81,7 +81,7 @@ class RECEPTHokenCheckClass(MyMasterClass):
 
         print("** NON confirmed file output shikaku with RECEPT file .....")
         #print(df_merged[masks])
-        self.toCsv(df_merged[~masks],"レセプト_byBirthName.csv")
+        self.toCsv(df_merged[~masks],"レセプト未確認_byBirth.csv")
 
 
 
